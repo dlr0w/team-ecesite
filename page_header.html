@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<title>VEGEFRU!</title>
+</head>
+<body>
+
+<th:block th:fragment="pageHeader">
+	<script src="http://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+	<link rel="stylesheet"
+			href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+	<script src="/js/util/stringUtil.js" th:src="@{/js/util/stringUtil.js}"></script>
+	<script src="/js/util/validator.js" th:src="@{/js/util/validator.js}"></script>
+	<script src="/js/dialogConfig.js" th:src="@{/js/dialogConfig.js}"></script>
+	<script>
+		$(() => {
+			$('button#login').on('click', function(event) {
+				event.preventDefault();
+				if($('#hiddenUserName').val() == '') {
+					login();
+				}else {
+					logout();
+				}
+			});
+			$('#loginError').dialog(dialogConfig.loginError);
+		});
+		
+		let login　= (event) => {	
+				let jsonString = {
+				'userName' : $('input[name=userName]').val(),
+				'password' : $('input[name=password]').val()
+			};
+			$.ajax({
+				type: 'POST',
+				url: '/garnet/auth/login',
+				data: JSON.stringify(jsonString),
+				datatype: 'json',
+				contentType: 'application/json',
+				scriptCharset: 'utf-8'
+			})
+			.then((result) => {
+				let user =JSON.parse(result);
+				if(user != null){
+					$('#hiddenUserName').val(`${user.userName}`);
+					$('.welcomeMsg').text(`ようこそ！ ${user.userName} さん`);
+					$('input[name=userName]').val('');
+					$('input[name=password]').val('');
+					$('#login').text('ログアウト');	
+					$('<li><a href="/garnet/mypage/" th:href="@{/garnet/mypage/}">マイページ</a></li>').appendTo('ul.menu');
+				}else {
+					$('#loginError').dialog("open");	
+				}
+			}, () => {
+				console.error('Error: ajaxconnection failed ログイン');
+			});		
+		};
+		
+		let logout = (event) => {
+			$.ajax({
+						type: 'POST',
+						url: '/garnet/auth/logout',
+						scriptCharset: 'utf-8'		
+					})
+					.then((result) => {
+						if(result == '') {
+							$('#hiddenUserName').val('');
+							$('#login').show();
+							$('#logout').hide();
+							$('.welcomeMsg').text(`ようこそ！ ゲスト さん`);
+							$('.menu li').eq(-1).remove();
+							$('#login').text('ログイン');
+							alert("ログアウトしました。");
+							location.href="/garnet/";
+						}
+					}, ()=> {
+						console.error('Error: ajaxconnection failed ログアウト');
+					});
+		};
+		
+	</script>
+	<div id="hiddenuser"></div>
+	<div class="headerTop">
+		<h1 class="logo"><a href="/garnet/">VEGEFRU!</a></h1>
+		<span class="signup" th:if="${loginSession.userName == null}">
+			<a href="/garnet/user/">
+			新規ユーザ登録はこちら
+			</a>
+		</span>
+		<span class="welcomeMsg"
+			th:text="'ようこそ！ '+ ${loginSession.userName != null ? loginSession.userName : 'ゲスト'} + ' さん'">
+		</span>
+		
+	</div>
+	 
+	<nav>
+		<div class="loginArea">
+			<input type="text" name="userName" />
+			<input type="password" name="password" />
+			<input type="hidden" id="hiddenUserName" th:value= "${loginSession.userName != null ? loginSession.userName : ''}"/>
+			<button id="login" th:text="${loginSession.userName != null ? 'ログアウト' : 'ログイン'}"></button>
+		</div>
+		<ul class="menu">
+			<li><a href="/garnet/cart/"　th:href="@{/garnet/cart/}">カート</a></li>
+			<li th:if="${loginSession.userName != null}"><a href="/garnet/mypage/">マイページ</a></li>
+		</ul>
+	</nav>
+		<!-- Modal Dialog (ログインエラー) -->
+	<div th:insert="fragments/dialog_login_error::dialogLoginError"></div>
+	
+</th:block>
+
+</body>
+</html>
